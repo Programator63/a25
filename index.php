@@ -1,6 +1,9 @@
 <?php
-require_once 'App/Infrastructure/sdbh.php'; use sdbh\sdbh;
-$dbh = new sdbh();
+require_once 'App/Application/CalculateService.php';
+
+use App\Application\Calculate;
+
+$Calculate = new Calculate();
 ?>
 <html>
 <head>
@@ -21,14 +24,42 @@ $dbh = new sdbh();
 
     <div class="row row-form">
         <div class="col-12">
+
+            <h3>
+                Прайс лист продуктов
+            </h3>
+            <table class="table mb-5">
+                <thead>
+                <tr>
+                    <th scope="col">Наименование</th>
+                    <th scope="col">Цена за день</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php $products = $Calculate->get_products();
+                if (is_array($products)) { ?>
+                    <?php foreach ($products as $product) {
+                        $name  = $product['NAME'];
+                        $price = $product['PRICE'];
+                        $tarif = $product['TARIFF'];
+                        ?>
+                        <tr>
+                            <td><?= $name; ?></td>
+                            <td><?= $price; ?></td>
+                        </tr>
+                    <?php } ?>
+                <?php } ?>
+
+                </tbody>
+            </table>
             <form action="App/calculate.php" method="POST" id="form">
 
-                <?php $products = $dbh->make_query('SELECT * FROM a25_products');
+                <?php $products = $Calculate->get_products();
                 if (is_array($products)) { ?>
                     <label class="form-label" for="product">Выберите продукт:</label>
                     <select class="form-select" name="product" id="product">
                         <?php foreach ($products as $product) {
-                            $name = $product['NAME'];
+                            $name  = $product['NAME'];
                             $price = $product['PRICE'];
                             $tarif = $product['TARIFF'];
                             ?>
@@ -40,7 +71,7 @@ $dbh = new sdbh();
                 <label for="customRange1" class="form-label" id="count">Количество дней:</label>
                 <input type="number" name="days" class="form-control" id="customRange1" min="1" max="30">
 
-                <?php $services = unserialize($dbh->mselect_rows('a25_settings', ['set_key' => 'services'], 0, 1, 'id')[0]['set_value']);
+                <?php $services = unserialize($Calculate->get_services());
                 if (is_array($services)) {
                     ?>
                     <label for="customRange1" class="form-label">Дополнительно:</label>
@@ -49,36 +80,55 @@ $dbh = new sdbh();
                     foreach ($services as $k => $s) {
                         ?>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="services[]" value="<?= $s; ?>" id="flexCheck<?= $index; ?>">
+                            <input class="form-check-input" type="checkbox" name="services[]" value="<?= $s; ?>"
+                                   id="flexCheck<?= $index; ?>">
                             <label class="form-check-label" for="flexCheck<?= $index; ?>">
                                 <?= $k ?>: <?= $s ?>
                             </label>
                         </div>
-                    <?php $index++; } ?>
+                        <?php $index++;
+                    } ?>
                 <?php } ?>
-
-                <button type="submit" class="btn btn-primary">Рассчитать</button>
             </form>
 
             <h5>Итоговая стоимость: <span id="total-price"></span></h5>
+
+
         </div>
     </div>
 </div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
-    $(document).ready(function() {
-        $("#form").submit(function(event) {
+    $(document).ready(function () {
+
+        $("#form").change(function () {
+            event.preventDefault();
+            $.ajax({
+                url: 'App/Presentation/calculate.php',
+                type: 'POST',
+                data: $(this).serialize(),
+                success: function (response) {
+                    $("#total-price").text(response);
+                },
+                error: function () {
+                    $("#total-price").text('Ошибка при расчете');
+                }
+            });
+
+        });
+
+        $("#form").submit(function (event) {
             event.preventDefault();
 
             $.ajax({
-                url: 'App/calculate.php',
+                url: 'App/Presentation/calculate.php',
                 type: 'POST',
                 data: $(this).serialize(),
-                success: function(response) {
+                success: function (response) {
                     $("#total-price").text(response);
                 },
-                error: function() {
+                error: function () {
                     $("#total-price").text('Ошибка при расчете');
                 }
             });

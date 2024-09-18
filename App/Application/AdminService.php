@@ -1,8 +1,12 @@
 <?php
-namespace App\Application;
-require_once '../Domain/Users/UserEntity.php'; use App\Domain\Users\UserEntity;
 
-class AdminService {
+namespace App\Application;
+require_once '../Domain/Users/UserEntity.php';
+
+use App\Domain\Users\UserEntity;
+
+class AdminService
+{
 
     /** @var UserEntity */
     public $user;
