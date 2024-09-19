@@ -33,7 +33,7 @@ $Calculate = new Calculate();
                 <thead>
                 <tr>
                     <th scope="col">Наименование</th>
-                    <th scope="col">Цена за день</th>
+                    <th scope="col">Цена за сутки</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -69,9 +69,11 @@ $Calculate = new Calculate();
                     </select>
                 <?php } ?>
 
-                <label for="customRange1" class="form-label" id="count">Количество дней: <span id="intervalD"></span></label>
+                <label for="customRange1" class="form-label" id="count">Количество дней: <span
+                            id="intervalD"></span></label>
                 <div id="datepicker"></div>
-                <input type="number" id="interval" name="days" class="form-control" min="1" max="30" style="display: none">
+                <input type="number" id="interval" name="days" class="form-control" min="1" max="30"
+                       style="display: none">
                 <?php $services = unserialize($Calculate->get_services());
                 if (is_array($services)) {
                     ?>
@@ -92,7 +94,15 @@ $Calculate = new Calculate();
                 <?php } ?>
             </form>
 
-            <h5>Итоговая стоимость: <span id="total-price"></span></h5>
+            <h5>
+                Итоговая стоимость:
+                <span id="total-price">0</span> руб
+                <span id="tooltip"
+
+                      data-toggle="tooltip" data-html="true">
+                    ?
+                </span>
+            </h5>
 
 
         </div>
@@ -111,7 +121,14 @@ $Calculate = new Calculate();
                 type: 'POST',
                 data: $(this).serialize(),
                 success: function (response) {
-                    $("#total-price").text(response);
+                    $("#total-price").text(response.total);
+                    let text = `Выбрано ${response.days} дней \n`;
+                    text += `Тариф ${response.tarif}р/сутки \n`
+                    if(response.services > 0){
+                        text += `+ ${response.services}р/сутки за доп.услуги`
+                    }
+
+                    $("#tooltip").attr("title", text)
                 },
                 error: function () {
                     $("#total-price").text('Ошибка при расчете');
@@ -121,57 +138,57 @@ $Calculate = new Calculate();
         });
 
 
+        var selectedDates = [];
 
-            var selectedDates = [];
+        $('#datepicker').datepicker({
+            onSelect: function (dateText, inst) {
+                var date = $(this).datepicker('getDate');
+                selectedDates.push(date);
 
-            $('#datepicker').datepicker({
-                onSelect: function (dateText, inst) {
-                    var date = $(this).datepicker('getDate');
-                    selectedDates.push(date);
+                if (selectedDates.length > 2) {
+                    selectedDates = [];
+                    $(this).datepicker('option', 'minDate', null);
+                    $(this).datepicker('option', 'maxDate', null);
+                } else if (selectedDates.length > 1) {
+                    selectedDates.sort(function (a, b) {
+                        return a.getTime() - b.getTime();
+                    });
 
-                    if (selectedDates.length > 2) {
-                        selectedDates = [];
-                        $(this).datepicker('option', 'minDate', null);
-                        $(this).datepicker('option', 'maxDate', null);
-                    } else if (selectedDates.length > 1) {
-                        selectedDates.sort(function (a, b) {
-                            return a.getTime() - b.getTime();
-                        });
+                    var startDate = selectedDates[0];
+                    var endDate = selectedDates[selectedDates.length - 1];
 
-                        var startDate = selectedDates[0];
-                        var endDate = selectedDates[selectedDates.length - 1];
-
-                        if (endDate - startDate > 30 * 24 * 60 * 60 * 1000) {
-                            $(this).datepicker('setDate', startDate);
-                            alert('Промежуток между датами не должен превышать 30 дней');
-                        } else {
-                            var diffDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
-                            $('#interval').val(diffDays);
-                            $('#interval').trigger('change');
-                            $('#intervalD').text(diffDays)
-                            $(this).datepicker('option', 'minDate', startDate);
-                            $(this).datepicker('option', 'maxDate', endDate);
-                        }
+                    if (endDate - startDate > 30 * 24 * 60 * 60 * 1000) {
+                        $(this).datepicker('setDate', startDate);
+                        alert('Промежуток между датами не должен превышать 30 дней');
+                    } else {
+                        var diffDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+                        $('#interval').val(diffDays);
+                        $('#interval').trigger('change');
+                        $('#intervalD').text(diffDays)
+                        $(this).datepicker('option', 'minDate', startDate);
+                        $(this).datepicker('option', 'maxDate', endDate);
                     }
-                },
-                beforeShowDay: function (date) {
-                    if (selectedDates.length > 1) {
-                        var startDate = selectedDates[0];
-                        var endDate = selectedDates[selectedDates.length - 1];
+                }
+            },
+            beforeShowDay: function (date) {
+                if (selectedDates.length > 1) {
+                    var startDate = selectedDates[0];
+                    var endDate = selectedDates[selectedDates.length - 1];
 
-                        if (date < startDate || date > endDate) {
-                            return [false, ''];
-                        } else {
-                            return [true, ''];
-                        }
+                    if (date < startDate || date > endDate) {
+                        return [false, ''];
                     } else {
                         return [true, ''];
                     }
+                } else {
+                    return [true, ''];
                 }
-            });
+            }
+        });
 
 
     })
+    $(document).tooltip();
 
 </script>
 </body>

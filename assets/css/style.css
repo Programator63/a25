@@ -11,11 +11,17 @@ h1 {
 .row-header {
     margin: 50px 0;
 }
-#datepicker{
+
+#datepicker {
     display: flex;
     justify-content: center;
 }
-#datepicker > div{
+
+#datepicker > div {
     width: 50%;
 
+}
+
+.ui-tooltip {
+    white-space: pre-line;
 }
