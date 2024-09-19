@@ -12,6 +12,7 @@ $Calculate = new Calculate();
     <link href="assets/css/style.css" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
             crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.0-beta.2/themes/smoothness/jquery-ui.css">
 </head>
 <body>
 <div class="container">
@@ -68,9 +69,9 @@ $Calculate = new Calculate();
                     </select>
                 <?php } ?>
 
-                <label for="customRange1" class="form-label" id="count">Количество дней:</label>
-                <input type="number" name="days" class="form-control" id="customRange1" min="1" max="30">
-
+                <label for="customRange1" class="form-label" id="count">Количество дней: <span id="intervalD"></span></label>
+                <div id="datepicker"></div>
+                <input type="number" id="interval" name="days" class="form-control" min="1" max="30" style="display: none">
                 <?php $services = unserialize($Calculate->get_services());
                 if (is_array($services)) {
                     ?>
@@ -99,6 +100,7 @@ $Calculate = new Calculate();
 </div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://code.jquery.com/ui/1.14.0-beta.2/jquery-ui.min.js"></script>
 <script>
     $(document).ready(function () {
 
@@ -118,22 +120,59 @@ $Calculate = new Calculate();
 
         });
 
-        $("#form").submit(function (event) {
-            event.preventDefault();
 
-            $.ajax({
-                url: 'App/Presentation/calculate.php',
-                type: 'POST',
-                data: $(this).serialize(),
-                success: function (response) {
-                    $("#total-price").text(response);
+
+            var selectedDates = [];
+
+            $('#datepicker').datepicker({
+                onSelect: function (dateText, inst) {
+                    var date = $(this).datepicker('getDate');
+                    selectedDates.push(date);
+
+                    if (selectedDates.length > 2) {
+                        selectedDates = [];
+                        $(this).datepicker('option', 'minDate', null);
+                        $(this).datepicker('option', 'maxDate', null);
+                    } else if (selectedDates.length > 1) {
+                        selectedDates.sort(function (a, b) {
+                            return a.getTime() - b.getTime();
+                        });
+
+                        var startDate = selectedDates[0];
+                        var endDate = selectedDates[selectedDates.length - 1];
+
+                        if (endDate - startDate > 30 * 24 * 60 * 60 * 1000) {
+                            $(this).datepicker('setDate', startDate);
+                            alert('Промежуток между датами не должен превышать 30 дней');
+                        } else {
+                            var diffDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+                            $('#interval').val(diffDays);
+                            $('#interval').trigger('change');
+                            $('#intervalD').text(diffDays)
+                            $(this).datepicker('option', 'minDate', startDate);
+                            $(this).datepicker('option', 'maxDate', endDate);
+                        }
+                    }
                 },
-                error: function () {
-                    $("#total-price").text('Ошибка при расчете');
+                beforeShowDay: function (date) {
+                    if (selectedDates.length > 1) {
+                        var startDate = selectedDates[0];
+                        var endDate = selectedDates[selectedDates.length - 1];
+
+                        if (date < startDate || date > endDate) {
+                            return [false, ''];
+                        } else {
+                            return [true, ''];
+                        }
+                    } else {
+                        return [true, ''];
+                    }
                 }
             });
-        });
-    });
+
+
+    })
+
 </script>
 </body>
 </html>
