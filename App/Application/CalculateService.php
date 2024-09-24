@@ -27,12 +27,12 @@ class Calculate extends sdbh
             return;
         }
 
-        $tarifs = unserialize($tarif);
+        $tariff = unserialize($tarif);
 
-        if (is_array($tarifs)) {
+        if (is_array($tariff)) {
             $product_price = $price;
             $maxDaysCount  = 0;
-            foreach ($tarifs as $day_count => $tarif_price) {
+            foreach ($tariff as $day_count => $tarif_price) {
                 if ($days >= $day_count && $maxDaysCount <= $day_count) {
                     $maxDaysCount  = $day_count;
                     $product_price = $tarif_price;
@@ -56,15 +56,12 @@ class Calculate extends sdbh
         $total_price += $services_price;
 
 
-        $summ = [
+        return array(
             'total' => $total_price,
             'services' => $services_total,
             'tarif' => $tarif,
             'days' => $days,
-        ];
-
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($summ);
+        );
     }
 
     public function get_products()

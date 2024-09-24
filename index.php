@@ -53,7 +53,7 @@ $Calculate = new Calculate();
 
                 </tbody>
             </table>
-            <form action="App/calculate.php" method="POST" id="form">
+            <form method="POST" id="form">
 
                 <?php $products = $Calculate->get_products();
                 if (is_array($products)) { ?>
@@ -114,7 +114,7 @@ $Calculate = new Calculate();
 <script>
     $(document).ready(function () {
 
-        $("#form").change(function () {
+        $("#form").change(function (event) {
             event.preventDefault();
             $.ajax({
                 url: 'App/Presentation/calculate.php',
@@ -161,7 +161,7 @@ $Calculate = new Calculate();
                         $(this).datepicker('setDate', startDate);
                         alert('Промежуток между датами не должен превышать 30 дней');
                     } else {
-                        var diffDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+                        var diffDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
                         $('#interval').val(diffDays);
                         $('#interval').trigger('change');
                         $('#intervalD').text(diffDays)

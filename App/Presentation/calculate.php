@@ -10,5 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selected_services = empty(!$_POST['services']) ? $_POST['services'] : [];
 
     $instance = new Calculate();
-    $instance->calculate1($days, $product_id, $selected_services);
+    $res = $instance->calculate1($days, $product_id, $selected_services);
+
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($res);
 }
