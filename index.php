@@ -26,33 +26,7 @@ $Calculate = new Calculate();
     <div class="row row-form">
         <div class="col-12">
 
-            <h3>
-                Прайс лист продуктов
-            </h3>
-            <table class="table mb-5">
-                <thead>
-                <tr>
-                    <th scope="col">Наименование</th>
-                    <th scope="col">Цена за сутки</th>
-                </tr>
-                </thead>
-                <tbody>
-                <?php $products = $Calculate->get_products();
-                if (is_array($products)) { ?>
-                    <?php foreach ($products as $product) {
-                        $name  = $product['NAME'];
-                        $price = $product['PRICE'];
-                        $tarif = $product['TARIFF'];
-                        ?>
-                        <tr>
-                            <td><?= $name; ?></td>
-                            <td><?= $price; ?></td>
-                        </tr>
-                    <?php } ?>
-                <?php } ?>
 
-                </tbody>
-            </table>
             <form method="POST" id="form">
 
                 <?php $products = $Calculate->get_products();
@@ -68,6 +42,17 @@ $Calculate = new Calculate();
                         <?php } ?>
                     </select>
                 <?php } ?>
+
+
+                <h3>
+                    Прайс лист
+                </h3>
+
+                <table class="table mb-5">
+                    <tbody id="tariffList">
+                    </tbody>
+                </table>
+
 
                 <label for="customRange1" class="form-label" id="count">Количество дней: <span
                             id="intervalD"></span></label>
@@ -121,10 +106,34 @@ $Calculate = new Calculate();
                 type: 'POST',
                 data: $(this).serialize(),
                 success: function (response) {
+
+                    let table = ''
+                    if (!response.tariffList) {
+                        table += `
+                            <tr>
+                                <td>1 дня</td>
+                                <td>${response.tarif} руб</td>
+                            </tr>
+                        `
+
+
+                    } else {
+                        Object.keys(response.tariffList).forEach((value, index) => {
+                            table += `
+                            <tr>
+                                <td>От ${index} дней</td>
+                                <td>${value} руб</td>
+                            </tr>
+                        `
+                        })
+                    }
+
+                    $("#tariffList").html(table)
+
                     $("#total-price").text(response.total);
                     let text = `Выбрано ${response.days} дней \n`;
                     text += `Тариф ${response.tarif}р/сутки \n`
-                    if(response.services > 0){
+                    if (response.services > 0) {
                         text += `+ ${response.services}р/сутки за доп.услуги`
                     }
 

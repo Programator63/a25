@@ -61,7 +61,14 @@ class Calculate extends sdbh
             'services' => $services_total,
             'tarif' => $tarif,
             'days' => $days,
+            'tariffList' => $tariff,
         );
+    }
+
+    public function get_product($id)
+    {
+
+
     }
 
     public function get_products()
