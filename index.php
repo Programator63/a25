@@ -1,6 +1,9 @@
 <?php
-require_once 'App/Infrastructure/sdbh.php'; use sdbh\sdbh;
-$dbh = new sdbh();
+require_once 'App/Application/CalculateService.php';
+
+use App\Application\Calculate;
+
+$Calculate = new Calculate();
 ?>
 <html>
 <head>
@@ -9,6 +12,7 @@ $dbh = new sdbh();
     <link href="assets/css/style.css" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
             crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.0-beta.2/themes/smoothness/jquery-ui.css">
 </head>
 <body>
 <div class="container">
@@ -21,14 +25,16 @@ $dbh = new sdbh();
 
     <div class="row row-form">
         <div class="col-12">
-            <form action="App/calculate.php" method="POST" id="form">
 
-                <?php $products = $dbh->make_query('SELECT * FROM a25_products');
+
+            <form method="POST" id="form">
+
+                <?php $products = $Calculate->get_products();
                 if (is_array($products)) { ?>
                     <label class="form-label" for="product">Выберите продукт:</label>
                     <select class="form-select" name="product" id="product">
                         <?php foreach ($products as $product) {
-                            $name = $product['NAME'];
+                            $name  = $product['NAME'];
                             $price = $product['PRICE'];
                             $tarif = $product['TARIFF'];
                             ?>
@@ -37,10 +43,23 @@ $dbh = new sdbh();
                     </select>
                 <?php } ?>
 
-                <label for="customRange1" class="form-label" id="count">Количество дней:</label>
-                <input type="number" name="days" class="form-control" id="customRange1" min="1" max="30">
 
-                <?php $services = unserialize($dbh->mselect_rows('a25_settings', ['set_key' => 'services'], 0, 1, 'id')[0]['set_value']);
+                <h3>
+                    Прайс лист
+                </h3>
+
+                <table class="table mb-5">
+                    <tbody id="tariffList">
+                    </tbody>
+                </table>
+
+
+                <label for="customRange1" class="form-label" id="count">Количество дней: <span
+                            id="intervalD"></span></label>
+                <div id="datepicker"></div>
+                <input type="number" id="interval" name="days" class="form-control" min="1" max="30"
+                       style="display: none">
+                <?php $services = unserialize($Calculate->get_services());
                 if (is_array($services)) {
                     ?>
                     <label for="customRange1" class="form-label">Дополнительно:</label>
@@ -49,41 +68,137 @@ $dbh = new sdbh();
                     foreach ($services as $k => $s) {
                         ?>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="services[]" value="<?= $s; ?>" id="flexCheck<?= $index; ?>">
+                            <input class="form-check-input" type="checkbox" name="services[]" value="<?= $s; ?>"
+                                   id="flexCheck<?= $index; ?>">
                             <label class="form-check-label" for="flexCheck<?= $index; ?>">
                                 <?= $k ?>: <?= $s ?>
                             </label>
                         </div>
-                    <?php $index++; } ?>
+                        <?php $index++;
+                    } ?>
                 <?php } ?>
-
-                <button type="submit" class="btn btn-primary">Рассчитать</button>
             </form>
 
-            <h5>Итоговая стоимость: <span id="total-price"></span></h5>
+            <h5>
+                Итоговая стоимость:
+                <span id="total-price">0</span> руб
+                <span id="tooltip"
+
+                      data-toggle="tooltip" data-html="true">
+                    ?
+                </span>
+            </h5>
+
+
         </div>
     </div>
 </div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://code.jquery.com/ui/1.14.0-beta.2/jquery-ui.min.js"></script>
 <script>
-    $(document).ready(function() {
-        $("#form").submit(function(event) {
-            event.preventDefault();
+    $(document).ready(function () {
 
+        $("#form").change(function (event) {
+            event.preventDefault();
             $.ajax({
-                url: 'App/calculate.php',
+                url: 'App/Presentation/calculate.php',
                 type: 'POST',
                 data: $(this).serialize(),
-                success: function(response) {
-                    $("#total-price").text(response);
+                success: function (response) {
+
+                    let table = ''
+                    if (!response.tariffList) {
+                        table += `
+                            <tr>
+                                <td>1 дня</td>
+                                <td>${response.tarif} руб</td>
+                            </tr>
+                        `
+
+
+                    } else {
+                        Object.keys(response.tariffList).forEach((value, index) => {
+                            table += `
+                            <tr>
+                                <td>От ${index} дней</td>
+                                <td>${value} руб</td>
+                            </tr>
+                        `
+                        })
+                    }
+
+                    $("#tariffList").html(table)
+
+                    $("#total-price").text(response.total);
+                    let text = `Выбрано ${response.days} дней \n`;
+                    text += `Тариф ${response.tarif}р/сутки \n`
+                    if (response.services > 0) {
+                        text += `+ ${response.services}р/сутки за доп.услуги`
+                    }
+
+                    $("#tooltip").attr("title", text)
                 },
-                error: function() {
+                error: function () {
                     $("#total-price").text('Ошибка при расчете');
                 }
             });
+
         });
-    });
+
+
+        var selectedDates = [];
+
+        $('#datepicker').datepicker({
+            onSelect: function (dateText, inst) {
+                var date = $(this).datepicker('getDate');
+                selectedDates.push(date);
+
+                if (selectedDates.length > 2) {
+                    selectedDates = [];
+                    $(this).datepicker('option', 'minDate', null);
+                    $(this).datepicker('option', 'maxDate', null);
+                } else if (selectedDates.length > 1) {
+                    selectedDates.sort(function (a, b) {
+                        return a.getTime() - b.getTime();
+                    });
+
+                    var startDate = selectedDates[0];
+                    var endDate = selectedDates[selectedDates.length - 1];
+
+                    if (endDate - startDate > 30 * 24 * 60 * 60 * 1000) {
+                        $(this).datepicker('setDate', startDate);
+                        alert('Промежуток между датами не должен превышать 30 дней');
+                    } else {
+                        var diffDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+                        $('#interval').val(diffDays);
+                        $('#interval').trigger('change');
+                        $('#intervalD').text(diffDays)
+                        $(this).datepicker('option', 'minDate', startDate);
+                        $(this).datepicker('option', 'maxDate', endDate);
+                    }
+                }
+            },
+            beforeShowDay: function (date) {
+                if (selectedDates.length > 1) {
+                    var startDate = selectedDates[0];
+                    var endDate = selectedDates[selectedDates.length - 1];
+
+                    if (date < startDate || date > endDate) {
+                        return [false, ''];
+                    } else {
+                        return [true, ''];
+                    }
+                } else {
+                    return [true, ''];
+                }
+            }
+        });
+
+
+    })
+    $(document).tooltip();
+
 </script>
 </body>
 </html>
