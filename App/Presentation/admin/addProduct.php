@@ -28,8 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tariffStr .= 'i:' . $tarif['Name'] . ';i:' . $tarif['Price'] . ';';
         }
         $tariffStr .= '}';
-
-        var_dump($tariffStr);
     } else{
         $countTariff = NULL;
     }
